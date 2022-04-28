@@ -1,6 +1,5 @@
 # Todo
 
 * `[x]` ignored extensions ignore letter case
-* `[x]` use a mime type library
-* `[ ]` add argument processing
+* `[ ]` use a MIME type library
 * `[ ]` use multithreading and thread-safe queue
