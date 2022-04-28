@@ -23,5 +23,7 @@ for dirpath, _, filenames in os.walk("dataset"):
 
 num_occs = Counter(exts_list)
 
+print("file extension\toccurrences\tfirst occurrence")
+print("------------------------------------------------")
 for occ in num_occs:
-    print(occ, num_occs[occ], first_occs[occ], sep = '\t\t')
+    print(occ, num_occs[occ], first_occs[occ], sep = "\t\t")
