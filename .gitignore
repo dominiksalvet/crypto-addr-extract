@@ -1,2 +1,3 @@
-dataset/
-small_dataset/
+/dataset/
+/small_dataset/
+__pycache__/
