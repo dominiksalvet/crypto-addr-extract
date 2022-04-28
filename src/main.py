@@ -3,12 +3,15 @@
 
 import os # used for working with file/directory paths
 import re # used for regular expressions
+import queue
 
 import config # import custom configuration file
 
 
 # global variables
 ignored_exts = set() # using set for quick search
+
+files_q = queue.Queue() # queue for loaded files
 
 
 def main():
@@ -17,16 +20,16 @@ def main():
     with open(config.IGNORED_EXTS_PATH) as ie_file:
         ignored_exts = set(ie_file.read().splitlines())
 
-    extract_dir(config.DATASET_DIR)
+    load_files(config.DATASET_DIR)
+    process_files()
 
-
-def extract_dir(dir):
+def load_files(dataset):
     # go through all files in given directory (recursively)
-    for dirpath, _, filenames in os.walk(dir):
+    for dirpath, _, filenames in os.walk(dataset):
         for filename in filenames:
             if is_candidate_file(filename):
                 file_path = os.path.join(dirpath, filename)
-                extract_file(file_path)
+                files_q.put(file_path) # add file path to queue
 
 
 def is_candidate_file(filename):
@@ -40,8 +43,9 @@ def is_candidate_file(filename):
     return not ext in ignored_exts
 
 
-def extract_file(file_path):
-    a = file_path
+def process_files():
+    while not files_q.empty():
+        a = files_q.get()
 
 
 main() # the entry point of the program
