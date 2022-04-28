@@ -3,7 +3,8 @@
 
 import os # used for working with file/directory paths
 import re # used for regular expressions
-import queue
+import queue # thread safe job queue
+import threading # used for multithreading
 
 import config # import custom configuration file
 
@@ -19,9 +20,16 @@ def main():
 
     with open(config.IGNORED_EXTS_PATH) as ie_file:
         ignored_exts = set(ie_file.read().splitlines())
+    
+    # create as many threads as there are physically present in CPU
+    for _ in range(os.cpu_count()):
+        thread = threading.Thread(target=process_files)
+        thread.setDaemon(True) # will be killed on main exit automatically
+        thread.start()
 
-    load_files(config.DATASET_DIR)
-    process_files()
+    load_files(config.DATASET_DIR) # fill up the queue
+    files_q.join() # wait for the queue to be empty
+
 
 def load_files(dataset):
     # go through all files in given directory (recursively)
@@ -44,8 +52,9 @@ def is_candidate_file(filename):
 
 
 def process_files():
-    while not files_q.empty():
-        a = files_q.get()
+    while True:
+        file_path = files_q.get()
+        files_q.task_done()
 
 
 main() # the entry point of the program
