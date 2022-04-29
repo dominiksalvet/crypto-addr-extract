@@ -21,4 +21,4 @@ IGNORE_GIT_REPOS=True # when enabled, files of .git directories are ignored
 
 # MIME type file identification (improves file filtering quality)
 USE_MIME = True # when disabled, uses only refused extensions file to decide
-MIME_CACHE_THRESHOLD = 2 # number of subsequent identical results to use cache
+MIME_CACHE_THRESHOLD = 3 # number of subsequent identical results to use cache
