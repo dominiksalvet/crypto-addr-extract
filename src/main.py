@@ -76,7 +76,6 @@ def is_file_accepted(dirpath, filename, mime_cache):
 
     # first check only filepath filters [very fast]
     if config.IGNORE_GIT_REPOS and ".git" in dirpath:
-        print(os.path.join(dirpath, filename))
         return False
     elif config.USE_MIME and ext in accepted_exts:
         return True
