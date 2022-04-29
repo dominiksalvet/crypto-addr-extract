@@ -49,46 +49,105 @@ def main():
         thread.start()
 
     filepaths_q.join() # wait for the queue to be empty
-    print("done")
+
+    print_current_progress() # last report
+    print("processed", sum(processed_counts), "files")
 
 
 def load_filepaths(dataset):
     global loaded_count
+    mime_cache = {} # dictionary of [<filepath/ext>]=+-num
 
     # go through all files in given directory (recursively)
     for dirpath, _, filenames in os.walk(dataset):
         for filename in filenames:
-            if is_file_accepted(dirpath, filename):
+            if is_file_accepted(dirpath, filename, mime_cache):
                 filepath = os.path.join(dirpath, filename)
                 filepaths_q.put(filepath) # add filepath to queue
                 loaded_count += 1
 
 
-def is_file_accepted(dirpath, filename):
+def is_file_accepted(dirpath, filename, mime_cache):
     # remove "@..." and "?..." parts of the file
     ext = re.sub(r"(\@|\?).*$", "", filename)
     # keep only the last file extension
     ext = re.sub(r"(^[^\.]*$|^([^\.]*\.)*)", "", ext)
     ext = ext.lower() # to match also UPPERCASE extensions
 
-    # first check file extension filters (quicker)
-    if ext in accepted_exts:
+    # first check only file extension filters [very fast]
+    if config.USE_MIME and ext in accepted_exts:
         return True
     elif ext in refused_exts:
         return False
-    else: # use precise MIME file type identification (slower)
-        filepath = os.path.join(dirpath, filename)
-        mime_type = magic.from_file(filepath, mime=True)
-        return mime_type.startswith("text/")
+    elif not config.USE_MIME:
+        return True
+
+    # try to identify file based on MIME cache [fast]
+    mime_key = dirpath + "/" + ext
+    mime_val = mime_cache.get(mime_key) # read cache
+
+    if mime_val is not None: # cache hit
+        if mime_val >= config.MIME_CACHE_THRESHOLD:
+            return True
+        elif mime_val <= -config.MIME_CACHE_THRESHOLD:
+            return False
+    else: # cache miss
+        mime_val = mime_cache[mime_key] = 0 # create cache item
+    
+    # cache item does not have enough values => collect next [slow]
+    filepath = os.path.join(dirpath, filename)
+    mime_type = magic.from_file(filepath, mime=True)
+
+    # reset counters if different decision than previous ones
+    if mime_type.startswith("text/"):
+        if mime_val < 0:
+            mime_val = 0
+        
+        mime_cache[mime_key] = mime_val + 1
+        return True
+    else:
+        if mime_val > 0:
+            mime_val = 0
+
+        mime_cache[mime_key] = mime_val - 1
+        return False
 
 
 def progress_monitor():
     print("processed files / loaded filepaths")
     while True: # thread function, will be ended on main thread exit
-        loaded_count_k = int(loaded_count / 1000)
-        processed_count_k = int(sum(processed_counts) / 1000)
-        print(processed_count_k, "k / ", loaded_count_k, "k", sep="")
+        print_current_progress()
         sleep(config.PROGRESS_REPORT_INTERVAL)
+
+
+def print_current_progress():
+    if loaded_count < 10_000:
+        loaded_divisor = 1
+        loaded_suff = ""
+    elif loaded_count < 10_000_000:
+        loaded_divisor = 1_000
+        loaded_suff = "k"
+    else:
+        loaded_divisor = 1_000_000
+        loaded_suff = "M"
+
+    processed_count = sum(processed_counts)
+    if processed_count < 10_000:
+        processed_divisor = 1
+        processed_suff = ""
+    elif processed_count < 10_000_000:
+        processed_divisor = 1_000
+        processed_suff = "k"
+    else:
+        processed_divisor = 1_000_000
+        processed_suff = "M"
+    
+    loaded_count_str = str(int(loaded_count / loaded_divisor))
+    loaded_count_str += loaded_suff
+    processed_count_str = str(int(processed_count / processed_divisor))
+    processed_count_str += processed_suff
+
+    print(processed_count_str, "/", loaded_count_str)
 
 
 def process_files(t_num):
