@@ -17,8 +17,9 @@ filepaths_q = queue.Queue() # queue for loaded filepaths
 
 # counters for progress monitoring
 loaded_count = 0
-processed_lock = threading.Lock()
-processed_count = 0 # must use the above lock for modification
+# each thread for processing files has its own counter
+# e.g., for deploying to a system with high number of CPUs
+processed_counts = [0] * config.HW_THREAD_COUNT
 
 
 def main():
@@ -32,14 +33,14 @@ def main():
     thread.setDaemon(True) # will be ended on main thread exit automatically
     thread.start()
 
-    # due to thread load balance distribution, load file paths first
+    # due to thread load balance distribution, load filepaths first
     # so that the user knows total number of files to be processed
     load_filepaths(config.DATASET_DIR) # fill up the queue
     
     # create as many threads as there are physically present in CPU
     # there are also other threads, but only these will be truly active
-    for _ in range(config.HW_THREAD_COUNT):
-        thread = threading.Thread(target=process_files)
+    for t_num in range(config.HW_THREAD_COUNT):
+        thread = threading.Thread(target=process_files, args=(t_num,))
         thread.setDaemon(True) # killed on exit
         thread.start()
 
@@ -55,7 +56,7 @@ def load_filepaths(dataset):
         for filename in filenames:
             if is_candidate_filename(filename):
                 filepath = os.path.join(dirpath, filename)
-                filepaths_q.put(filepath) # add file path to queue
+                filepaths_q.put(filepath) # add filepath to queue
                 loaded_count += 1
 
 
@@ -74,13 +75,13 @@ def progress_monitor():
     print("processed files / loaded filepaths")
     while True: # thread function, will be ended on main thread exit
         loaded_count_k = int(loaded_count / 1000)
-        processed_count_k = int(processed_count / 1000)
+        processed_count_k = int(sum(processed_counts) / 1000)
         print(processed_count_k, "k / ", loaded_count_k, "k", sep="")
         sleep(config.PROGRESS_REPORT_INTERVAL)
 
 
-def process_files():
-    global processed_lock, processed_count
+def process_files(t_num):
+    global processed_counts
 
     while True:
         filepath = filepaths_q.get()
@@ -88,8 +89,8 @@ def process_files():
         for _ in range(100):
             a = filepath
     
-        with processed_lock:
-            processed_count += 1
+        # increase processed files count for current thread
+        processed_counts[t_num] += 1
         filepaths_q.task_done()
 
 
