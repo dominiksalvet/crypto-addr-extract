@@ -23,6 +23,10 @@ loaded_count = 0
 # e.g., for deploying to a system with high number of CPUs
 processed_counts = [0] * config.NUM_THREADS
 
+# prepare regular expressions
+remove_prop_re = re.compile(r"(\@|\?).*$")
+keep_last_ext_re = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
+
 
 def main():
     global accepted_exts, refused_exts
@@ -69,9 +73,9 @@ def load_filepaths(dataset):
 
 def is_file_accepted(dirpath, filename, mime_cache):
     # remove "@..." and "?..." parts of the file
-    ext = re.sub(r"(\@|\?).*$", "", filename)
+    ext = remove_prop_re.sub("", filename)
     # keep only the last file extension
-    ext = re.sub(r"(^[^\.]*$|^([^\.]*\.)*)", "", ext)
+    ext = keep_last_ext_re.sub("", ext)
     ext = ext.lower() # to match also UPPERCASE extensions
 
     # first check only filepath filters [very fast]
