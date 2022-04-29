@@ -6,14 +6,12 @@ import re # used for regular expressions
 import queue # thread safe job queue
 import threading # used for multithreading
 from time import sleep # sleeping for progress monitor thread
-import magic # used for precise file type identification
 
 import config # import custom configuration file
 
 
 # global variables
-accepted_exts = set() # using sets for quick search
-refused_exts = set()
+ignored_exts = set() # using set for quick search
 
 filepaths_q = queue.Queue() # queue for loaded filepaths
 
@@ -29,12 +27,10 @@ keep_last_ext_re = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
 
 
 def main():
-    global accepted_exts, refused_exts
+    global ignored_exts
 
-    with open(config.ACCEPTED_EXTS_PATH) as ae_file:
-        accepted_exts = set(ae_file.read().splitlines())
-    with open(config.REFUSED_EXTS_PATH) as ie_file:
-        refused_exts = set(ie_file.read().splitlines())
+    with open(config.IGNORED_EXTS_PATH) as ie_file:
+        ignored_exts = set(ie_file.read().splitlines())
     
     # create progress monitor thread
     thread = threading.Thread(target=progress_monitor)
@@ -60,63 +56,24 @@ def main():
 
 def load_filepaths(dataset):
     global loaded_count
-    mime_cache = {} # dictionary of [<filepath/ext>]=+-num
 
     # go through all files in given directory (recursively)
     for dirpath, _, filenames in os.walk(dataset):
         for filename in filenames:
-            if is_file_accepted(dirpath, filename, mime_cache):
+            if is_filename_accepted(filename):
                 filepath = os.path.join(dirpath, filename)
                 filepaths_q.put(filepath) # add filepath to queue
                 loaded_count += 1
 
 
-def is_file_accepted(dirpath, filename, mime_cache):
+def is_filename_accepted(filename):
     # remove "@..." and "?..." parts of the file
     ext = remove_prop_re.sub("", filename)
     # keep only the last file extension
     ext = keep_last_ext_re.sub("", ext)
+
     ext = ext.lower() # to match also UPPERCASE extensions
-
-    # first check only filepath filters [very fast]
-    if config.IGNORE_GIT_REPOS and ".git" in dirpath:
-        return False
-    elif config.USE_MIME and ext in accepted_exts:
-        return True
-    elif ext in refused_exts:
-        return False
-    elif not config.USE_MIME:
-        return True
-
-    # try to identify file based on MIME cache [fast]
-    mime_key = dirpath + "/" + ext
-    mime_val = mime_cache.get(mime_key) # read cache
-
-    if mime_val is not None: # cache hit
-        if mime_val >= config.MIME_CACHE_THRESHOLD:
-            return True
-        elif mime_val <= -config.MIME_CACHE_THRESHOLD:
-            return False
-    else: # cache miss
-        mime_val = mime_cache[mime_key] = 0 # create cache item
-    
-    # cache item does not have enough values => collect next [slow]
-    filepath = os.path.join(dirpath, filename)
-    mime_type = magic.from_file(filepath, mime=True)
-
-    # reset counters if different decision than previous ones
-    if mime_type.startswith("text/"):
-        if mime_val < 0:
-            mime_val = 0
-        
-        mime_cache[mime_key] = mime_val + 1
-        return True
-    else:
-        if mime_val > 0:
-            mime_val = 0
-
-        mime_cache[mime_key] = mime_val - 1
-        return False
+    return not ext in ignored_exts
 
 
 def progress_monitor():
@@ -165,6 +122,35 @@ def process_files(t_num):
         # TODO: replace with useful work
         for _ in range(100):
             a = filepath
+
+        # try:
+        #     with open(filepath, encoding="ascii") as file:
+        #         file_content = file.read()
+        #         if magic.from_buffer(file_content, mime=True).startswith("text/"):
+        #             crypto_addr = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
+        #             if crypto_addr:
+        #                 print(filepath, crypto_addr)
+        # except UnicodeDecodeError:
+        #     pass
+
+
+            # result = re.search(r'BEGIN PGP.*END PGP', file_content)
+            # if result:
+            #     print(result)
+
+        # with open(filepath, encoding='utf-8', errors='ignore') as file:
+        #     a = file.read()
+
+        # try:
+        #     with open(filepath) as file:
+        #         file_content = file.read()
+        #         # result = re.search(r'BEGIN PGP PUBLIC KEY BLOCK.*END PGP PUBLIC KEY BLOCK', file_content)
+        #         result = re.search(r'[a-zA-Z0-9]*[a-zA-Z0-9]{25}[a-zA-Z0-9]*', file_content)
+        #         if result:
+        #             print(filepath)
+        # except:
+        #     with open(filepath, "rb") as file:
+        #         file_content = file.read()
 
         # increase processed files count for current thread
         processed_counts[t_num] += 1
