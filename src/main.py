@@ -5,13 +5,15 @@ import os # used for working with file/directory paths
 import re # used for regular expressions
 import queue # thread safe job queue
 import threading # used for multithreading
-from time import sleep
+from time import sleep # sleeping for progress monitor thread
+import magic # used for precise file type identification
 
 import config # import custom configuration file
 
 
 # global variables
-ignored_exts = set() # using set for quick search
+accepted_exts = set() # using sets for quick search
+refused_exts = set()
 
 filepaths_q = queue.Queue() # queue for loaded filepaths
 
@@ -19,14 +21,16 @@ filepaths_q = queue.Queue() # queue for loaded filepaths
 loaded_count = 0
 # each thread for processing files has its own counter
 # e.g., for deploying to a system with high number of CPUs
-processed_counts = [0] * config.HW_THREAD_COUNT
+processed_counts = [0] * config.NUM_THREADS
 
 
 def main():
-    global ignored_exts
+    global accepted_exts, refused_exts
 
-    with open(config.IGNORED_EXTS_PATH) as ie_file:
-        ignored_exts = set(ie_file.read().splitlines())
+    with open(config.ACCEPTED_EXTS_PATH) as ae_file:
+        accepted_exts = set(ae_file.read().splitlines())
+    with open(config.REFUSED_EXTS_PATH) as ie_file:
+        refused_exts = set(ie_file.read().splitlines())
     
     # create progress monitor thread
     thread = threading.Thread(target=progress_monitor)
@@ -39,7 +43,7 @@ def main():
     
     # create as many threads as there are physically present in CPU
     # there are also other threads, but only these will be truly active
-    for t_num in range(config.HW_THREAD_COUNT):
+    for t_num in range(config.NUM_THREADS):
         thread = threading.Thread(target=process_files, args=(t_num,))
         thread.setDaemon(True) # killed on exit
         thread.start()
@@ -54,21 +58,28 @@ def load_filepaths(dataset):
     # go through all files in given directory (recursively)
     for dirpath, _, filenames in os.walk(dataset):
         for filename in filenames:
-            if is_candidate_filename(filename):
+            if is_file_accepted(dirpath, filename):
                 filepath = os.path.join(dirpath, filename)
                 filepaths_q.put(filepath) # add filepath to queue
                 loaded_count += 1
 
 
-def is_candidate_filename(filename):
+def is_file_accepted(dirpath, filename):
     # remove "@..." and "?..." parts of the file
     ext = re.sub(r"(\@|\?).*$", "", filename)
     # keep only the last file extension
     ext = re.sub(r"(^[^\.]*$|^([^\.]*\.)*)", "", ext)
-    
     ext = ext.lower() # to match also UPPERCASE extensions
-    # due performance, no file MIME type check here
-    return not ext in ignored_exts
+
+    # first check file extension filters (quicker)
+    if ext in accepted_exts:
+        return True
+    elif ext in refused_exts:
+        return False
+    else: # use precise MIME file type identification (slower)
+        filepath = os.path.join(dirpath, filename)
+        mime_type = magic.from_file(filepath, mime=True)
+        return mime_type.startswith("text/")
 
 
 def progress_monitor():
@@ -86,9 +97,10 @@ def process_files(t_num):
     while True:
         filepath = filepaths_q.get()
 
+        # TODO: replace with useful work
         for _ in range(100):
             a = filepath
-    
+
         # increase processed files count for current thread
         processed_counts[t_num] += 1
         filepaths_q.task_done()
