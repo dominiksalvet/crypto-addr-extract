@@ -74,8 +74,11 @@ def is_file_accepted(dirpath, filename, mime_cache):
     ext = re.sub(r"(^[^\.]*$|^([^\.]*\.)*)", "", ext)
     ext = ext.lower() # to match also UPPERCASE extensions
 
-    # first check only file extension filters [very fast]
-    if config.USE_MIME and ext in accepted_exts:
+    # first check only filepath filters [very fast]
+    if config.IGNORE_GIT_REPOS and ".git" in dirpath:
+        print(os.path.join(dirpath, filename))
+        return False
+    elif config.USE_MIME and ext in accepted_exts:
         return True
     elif ext in refused_exts:
         return False
