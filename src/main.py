@@ -10,6 +10,10 @@ from time import sleep # sleeping for progress monitor thread
 import config # import custom configuration file
 
 
+# prepare regular expressions (constants)
+REMOVE_PROP_RE = re.compile(r"(\@|\?).*$")
+KEEP_LAST_EXT_RE = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
+
 # global variables
 ignored_dirs = set() # using sets for quick search
 ignored_exts = set()
@@ -24,10 +28,6 @@ loaded_count = 0
 # each thread for processing files has its own counter
 # e.g., for deploying to a system with high number of CPUs
 processed_counts = [0] * config.NUM_THREADS
-
-# prepare regular expressions
-remove_prop_re = re.compile(r"(\@|\?).*$")
-keep_last_ext_re = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
 
 
 def main():
@@ -95,9 +95,9 @@ def spawn_process_files_threads(num_thread):
 
 def is_filename_accepted(filename):
     # remove "@..." and "?..." parts of the file
-    ext = remove_prop_re.sub("", filename)
+    ext = REMOVE_PROP_RE.sub("", filename)
     # keep only the last file extension
-    ext = keep_last_ext_re.sub("", ext)
+    ext = KEEP_LAST_EXT_RE.sub("", ext)
 
     ext = ext.lower() # to match also UPPERCASE extensions
     return not ext in ignored_exts
@@ -146,14 +146,14 @@ def process_files(t_num):
     while True:
         filepath = filepaths_q.get()
 
-        # # replace unknown bytes with a question mark "?"
-        # with open(filepath, encoding="ascii", errors="replace") as file:
-        #     file_content = file.read()
-        #     matches = common_addr_re.findall(file_content)
-        #     for match in matches:
-        #         for crypto_symbol, crypto_addr_re in cryptos:
-        #             if crypto_addr_re.match(match):
-        #                 print(filepath, crypto_symbol, match)
+        # replace unknown bytes with a question mark "?"
+        with open(filepath, encoding="ascii", errors="replace") as file:
+            file_content = file.read()
+            matches = common_addr_re.findall(file_content)
+            for match in matches:
+                for crypto_symbol, crypto_addr_re in cryptos:
+                    if crypto_addr_re.match(match):
+                        print(filepath, crypto_symbol, match)
 
             # result = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
             # if result:
