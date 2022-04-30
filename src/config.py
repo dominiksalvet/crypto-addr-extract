@@ -5,8 +5,10 @@ import os
 
 # file path constants
 DATASET_DIR = "dataset" # the root path of the uncompressed dataset
+
 IGNORED_DIRS_PATH = "ignored_dirs" # ignored directory names
 IGNORED_EXTS_PATH = "ignored_exts" # ignored file extensions
+CRYPTO_ADDRS_PATH = "crypto_addrs" # contains regex of various crypto addresses
 
 # runtime environment configuration
 NUM_THREADS = os.cpu_count() # defaults to number of CPU HW threads

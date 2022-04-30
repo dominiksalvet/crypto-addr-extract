@@ -5,3 +5,4 @@
 * `[x]` use individual counters for threads
 * `[x]` ignore custom directories (ignore letter case)
 * `[x]` remove requirements.txt
+* `[ ]` file extension identification regexes are CONSTANTS

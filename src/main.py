@@ -14,6 +14,9 @@ import config # import custom configuration file
 ignored_dirs = set() # using sets for quick search
 ignored_exts = set()
 
+common_addr_re = None # common regex for all crypto addresses
+cryptos = [] # pairs of crypto symbol and its address regex
+
 filepaths_q = queue.Queue() # queue for loaded filepaths
 
 # counters for progress monitoring
@@ -28,12 +31,23 @@ keep_last_ext_re = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
 
 
 def main():
-    global ignored_dirs, ignored_exts
+    global ignored_dirs, ignored_exts, common_addr_re, cryptos
 
     with open(config.IGNORED_DIRS_PATH) as id_file:
         ignored_dirs = set(id_file.read().splitlines())
     with open(config.IGNORED_EXTS_PATH) as ie_file:
         ignored_exts = set(ie_file.read().splitlines())
+    
+    with open(config.CRYPTO_ADDRS_PATH) as ar_file:
+        # first line is common regex for all crypto addresses
+        common_addr = ar_file.readline().strip(os.linesep)
+        crypto_strs = ar_file.read().splitlines() # read the rest
+
+    # compile all loaded regex
+    common_addr_re = re.compile(common_addr)
+    for crypto_str in crypto_strs:
+        crypto_symbol, crypto_addr = crypto_str.split(" ", maxsplit=1)
+        cryptos.append((crypto_symbol, re.compile(crypto_addr)))
     
     # create progress monitor thread
     thread = threading.Thread(target=progress_monitor)
@@ -123,6 +137,37 @@ def process_files(t_num):
 
     while True:
         filepath = filepaths_q.get()
+
+        # # replace unknow bytes with a question mark "?"
+        # with open(filepath, encoding="ascii", errors="replace") as file:
+        #     file_content = file.read()
+        #     result = common_addr_re.search(file_content)
+        #     if result:
+        #         print(filepath, result.group())
+
+            # result = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
+            # if result:
+            #     result = re.search(r'0x[a-fA-F0-9]{40}', result.group())
+            #     if result:
+            #         print(filepath, result.group())
+
+
+        # try:
+        #     with open(filepath, encoding="ascii") as file:
+        #         file_content = file.read()
+        #         crypto_addr = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
+        #         if crypto_addr:
+        #             correct_cnt += 1
+        # except UnicodeDecodeError:
+        #     with open(filepath, encoding="ascii", errors="replace") as file:
+        #         file_content = file.read()
+        #         crypto_addr = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
+        #         if crypto_addr:
+        #             error_cnt += 1
+        
+        # if correct_cnt % 1000 == 0 or error_cnt % 1000 == 0:
+        #     print(correct_cnt, error_cnt)
+
 
         # try:
         #     with open(filepath, encoding="ascii") as file:
