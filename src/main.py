@@ -43,7 +43,7 @@ def main():
         common_addr = ar_file.readline().strip(os.linesep)
         crypto_strs = ar_file.read().splitlines() # read the rest
 
-    # compile all loaded regex
+    # compile all loaded regex (match priority is determined by their order in file)
     common_addr_re = re.compile(common_addr)
     for crypto_str in crypto_strs:
         crypto_symbol, crypto_addr = crypto_str.split(" ", maxsplit=1)
