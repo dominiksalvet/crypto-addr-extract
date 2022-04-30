@@ -54,16 +54,17 @@ def main():
     thread.setDaemon(True) # will be ended on main thread exit automatically
     thread.start()
 
-    # due to thread load balance distribution, load filepaths first
-    # so that the user knows total number of files to be processed
-    load_filepaths(config.DATASET_DIR) # fill up the queue
-    
-    # create as many threads as there are physically present in CPU
-    # there are also other threads, but only these will be truly active
-    for t_num in range(config.NUM_THREADS):
-        thread = threading.Thread(target=process_files, args=(t_num,))
-        thread.setDaemon(True) # killed on exit
-        thread.start()
+    # not using continuous processing in default, so that the user knows the total
+    # number of files to be processed as soon as possible
+    if not config.CONTINUOUS_PROCESSING:
+        load_filepaths(config.DATASET_DIR) # fill up the queue
+        # create as many threads as there are physically present in CPU
+        # there are also other threads, but only these will be truly active
+        spawn_process_files_threads(config.NUM_THREADS)
+    else: # this approach may be used for lower memory consumption
+        filepaths_q.maxsize = config.CONTINUOUS_BUFF_SIZE
+        spawn_process_files_threads(config.NUM_THREADS)
+        load_filepaths(config.DATASET_DIR)
 
     filepaths_q.join() # wait for the queue to be empty
 
@@ -83,6 +84,13 @@ def load_filepaths(dataset):
                 filepath = os.path.join(dirpath, filename)
                 filepaths_q.put(filepath) # add filepath to queue
                 loaded_count += 1
+
+
+def spawn_process_files_threads(num_thread):
+    for t_num in range(num_thread):
+        thread = threading.Thread(target=process_files, args=(t_num,))
+        thread.setDaemon(True) # killed on exit
+        thread.start()
 
 
 def is_filename_accepted(filename):
@@ -138,12 +146,14 @@ def process_files(t_num):
     while True:
         filepath = filepaths_q.get()
 
-        # # replace unknow bytes with a question mark "?"
+        # # replace unknown bytes with a question mark "?"
         # with open(filepath, encoding="ascii", errors="replace") as file:
         #     file_content = file.read()
-        #     result = common_addr_re.search(file_content)
-        #     if result:
-        #         print(filepath, result.group())
+        #     matches = common_addr_re.findall(file_content)
+        #     for match in matches:
+        #         for crypto_symbol, crypto_addr_re in cryptos:
+        #             if crypto_addr_re.match(match):
+        #                 print(filepath, crypto_symbol, match)
 
             # result = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
             # if result:

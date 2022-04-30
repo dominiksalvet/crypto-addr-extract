@@ -7,3 +7,4 @@
 * `[x]` remove requirements.txt
 * `[ ]` file extension identification regexes are CONSTANTS
 * `[ ]` break into multiple files
+* `[x]` use streaming processing (progress is flawed), better memory usage
