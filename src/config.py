@@ -5,6 +5,7 @@ import os
 
 # file path constants
 DATASET_DIR = "dataset" # the root path of the uncompressed dataset
+IGNORED_DIRS_PATH = "ignored_dirs" # ignored directory names
 IGNORED_EXTS_PATH = "ignored_exts" # ignored file extensions
 
 # runtime environment configuration

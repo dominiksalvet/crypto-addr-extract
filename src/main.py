@@ -11,7 +11,8 @@ import config # import custom configuration file
 
 
 # global variables
-ignored_exts = set() # using set for quick search
+ignored_dirs = set() # using sets for quick search
+ignored_exts = set()
 
 filepaths_q = queue.Queue() # queue for loaded filepaths
 
@@ -27,8 +28,10 @@ keep_last_ext_re = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
 
 
 def main():
-    global ignored_exts
+    global ignored_dirs, ignored_exts
 
+    with open(config.IGNORED_DIRS_PATH) as id_file:
+        ignored_dirs = set(id_file.read().splitlines())
     with open(config.IGNORED_EXTS_PATH) as ie_file:
         ignored_exts = set(ie_file.read().splitlines())
     
@@ -58,7 +61,9 @@ def load_filepaths(dataset):
     global loaded_count
 
     # go through all files in given directory (recursively)
-    for dirpath, _, filenames in os.walk(dataset):
+    for dirpath, dirnames, filenames in os.walk(dataset, topdown=True):
+        # pruning the search (matches also UPPERCASE ignored directory names)
+        dirnames[:] = [d for d in dirnames if d.lower() not in ignored_dirs]
         for filename in filenames:
             if is_filename_accepted(filename):
                 filepath = os.path.join(dirpath, filename)
@@ -118,10 +123,6 @@ def process_files(t_num):
 
     while True:
         filepath = filepaths_q.get()
-
-        # TODO: replace with useful work
-        for _ in range(100):
-            a = filepath
 
         # try:
         #     with open(filepath, encoding="ascii") as file:
