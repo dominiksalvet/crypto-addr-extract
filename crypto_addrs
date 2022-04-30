@@ -1,4 +1,4 @@
-[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]
+[13LM6NPDX480bln][a-zA-Z0-9]{25,95}
 btc ([13]|bc1)[a-zA-HJ-NP-Z0-9]{25,39}
 ltc ([LM]|ltc1)[a-km-zA-HJ-NP-Z1-9]{26,33}
 nmc ([6NM]|nc1)[a-zA-HJ-NP-Z0-9]{25,39}

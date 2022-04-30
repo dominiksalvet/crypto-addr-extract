@@ -54,14 +54,14 @@ def main():
     thread.setDaemon(True) # will be ended on main thread exit automatically
     thread.start()
 
-    # not using continuous processing in default, so that the user knows the total
-    # number of files to be processed as soon as possible
+    # when not using continuous processing, user knows the total number of files
+    # to be processed as soon as possible
     if not config.CONTINUOUS_PROCESSING:
         load_filepaths(config.DATASET_DIR) # fill up the queue
         # create as many threads as there are physically present in CPU
         # there are also other threads, but only these will be truly active
         spawn_process_files_threads(config.NUM_THREADS)
-    else: # this approach may be used for lower memory consumption
+    else:
         filepaths_q.maxsize = config.CONTINUOUS_BUFF_SIZE
         spawn_process_files_threads(config.NUM_THREADS)
         load_filepaths(config.DATASET_DIR)
