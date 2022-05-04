@@ -75,6 +75,10 @@ def main():
 def load_filepaths(dataset):
     global loaded_count
 
+    if not os.path.isdir(dataset):
+        print("directory", dataset, "does not exist")
+        quit(1)
+
     # go through all files in given directory (recursively)
     for dirpath, dirnames, filenames in os.walk(dataset, topdown=True):
         # pruning the search (matches also UPPERCASE ignored directory names)
