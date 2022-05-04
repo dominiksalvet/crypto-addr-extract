@@ -4,6 +4,7 @@
 import os
 
 # file path constants
+# the default dataset contains all archives with size of <=20MB
 DATASET_DIR = "dataset" # the root path of the uncompressed dataset
 
 IGNORED_DIRS_PATH = "ignored_dirs" # ignored directory names
