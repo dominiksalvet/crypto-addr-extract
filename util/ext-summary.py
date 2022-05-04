@@ -15,6 +15,8 @@ for dirpath, _, filenames in os.walk("dataset"):
         ext = re.sub(r'(\@|\?).*$', '', filename)
         ext = re.sub(r'(^[^\.]*$|^([^\.]*\.)*)', '', ext)
         ext = ext.lower()
+        if ext.isnumeric():
+            ext = ""
 
         if not ext in exts_set:
             first_occs[ext] = os.path.join(dirpath, filename)
