@@ -1,4 +1,4 @@
-/dataset/
-/small_dataset/
+/dataset_big/
+/dataset_small/
+/dataset_tiny/
 __pycache__/
-/just_dataset/
