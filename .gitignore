@@ -1,5 +1,5 @@
 /dataset/
-/dataset_big/
 /dataset_small/
-/dataset_tiny/
+/dataset_mid/
+/dataset_big/
 __pycache__/
