@@ -21,10 +21,10 @@ ignored_exts = set()
 common_addr_re = None # common regex for all crypto addresses
 cryptos = [] # pairs of crypto symbol and its address regex
 
-filepaths_q = queue.Queue() # queue for loaded filepaths
+filepaths_q = queue.Queue() # queue for prepared filepaths
 
 # counters for progress monitoring
-loaded_count = 0
+prepared_count = 0
 # each thread for processing files has its own counter
 # e.g., for deploying to a system with high number of CPUs
 processed_counts = [0] * config.NUM_THREADS
@@ -74,7 +74,7 @@ def main():
 
 
 def load_filepaths(dataset):
-    global loaded_count
+    global prepared_count
 
     if not os.path.isdir(dataset):
         print("directory", dataset, "does not exist")
@@ -88,7 +88,7 @@ def load_filepaths(dataset):
             if is_filename_accepted(filename):
                 filepath = os.path.join(dirpath, filename)
                 filepaths_q.put(filepath) # add filepath to queue
-                loaded_count += 1
+                prepared_count += 1
 
 
 def spawn_process_files_threads(num_thread):
@@ -109,22 +109,22 @@ def is_filename_accepted(filename):
 
 
 def progress_monitor():
-    print("matched / processed / loaded [files]")
+    print("matched / processed / prepared [files]")
     while True: # thread function, will be ended on main thread exit
         print_current_progress()
         sleep(config.PROGRESS_REPORT_INTERVAL)
 
 
 def print_current_progress():
-    if loaded_count < 10_000:
-        loaded_divisor = 1
-        loaded_suff = ""
-    elif loaded_count < 10_000_000:
-        loaded_divisor = 1_000
-        loaded_suff = "k"
+    if prepared_count < 10_000:
+        prepared_divisor = 1
+        prepared_suff = ""
+    elif prepared_count < 10_000_000:
+        prepared_divisor = 1_000
+        prepared_suff = "k"
     else:
-        loaded_divisor = 1_000_000
-        loaded_suff = "M"
+        prepared_divisor = 1_000_000
+        prepared_suff = "M"
 
     processed_count = sum(processed_counts)
     if processed_count < 10_000:
@@ -148,16 +148,17 @@ def print_current_progress():
         matched_divisor = 1_000_000
         matched_suff = "M"
     
-    loaded_count_str = str(int(loaded_count / loaded_divisor))
-    loaded_count_str += loaded_suff
+    prepared_count_str = str(int(prepared_count / prepared_divisor))
+    prepared_count_str += prepared_suff
     processed_count_str = str(int(processed_count / processed_divisor))
     processed_count_str += processed_suff
     matched_count_str = str(int(matched_count / matched_divisor))
     matched_count_str += matched_suff
 
-    print(matched_count_str, "/", processed_count_str, "/", loaded_count_str)
+    print(matched_count_str, "/", processed_count_str, "/", prepared_count_str)
 
 
+# main function for working threads
 def process_files(t_num):
     global processed_counts
 
