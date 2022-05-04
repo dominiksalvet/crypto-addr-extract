@@ -28,6 +28,7 @@ loaded_count = 0
 # each thread for processing files has its own counter
 # e.g., for deploying to a system with high number of CPUs
 processed_counts = [0] * config.NUM_THREADS
+matched_counts = [0] * config.NUM_THREADS # number of files matching regex
 
 
 def main():
@@ -108,7 +109,7 @@ def is_filename_accepted(filename):
 
 
 def progress_monitor():
-    print("processed files / loaded filepaths")
+    print("matched / processed / loaded [files]")
     while True: # thread function, will be ended on main thread exit
         print_current_progress()
         sleep(config.PROGRESS_REPORT_INTERVAL)
@@ -135,13 +136,26 @@ def print_current_progress():
     else:
         processed_divisor = 1_000_000
         processed_suff = "M"
+
+    matched_count = sum(matched_counts)
+    if matched_count < 10_000:
+        matched_divisor = 1
+        matched_suff = ""
+    elif matched_count < 10_000_000:
+        matched_divisor = 1_000
+        matched_suff = "k"
+    else:
+        matched_divisor = 1_000_000
+        matched_suff = "M"
     
     loaded_count_str = str(int(loaded_count / loaded_divisor))
     loaded_count_str += loaded_suff
     processed_count_str = str(int(processed_count / processed_divisor))
     processed_count_str += processed_suff
+    matched_count_str = str(int(matched_count / matched_divisor))
+    matched_count_str += matched_suff
 
-    print(processed_count_str, "/", loaded_count_str)
+    print(matched_count_str, "/", processed_count_str, "/", loaded_count_str)
 
 
 def process_files(t_num):
