@@ -200,20 +200,6 @@ def process_files(t_num):
         filepaths_q.task_done()
 
 
-def add_found_record(addr, symbol, site_name, filepath):
-    with found_records_lock:
-        if addr in found_records:
-            found_records[addr]["count"] += 1
-        else:
-            found_records[addr] = {"symbol": symbol, "count": 1, "sites": {}}
-        
-        if site_name in found_records[addr]["sites"]:
-            if filepath not in found_records[addr]["sites"][site_name]:
-                found_records[addr]["sites"][site_name].append(filepath)
-        else:
-            found_records[addr]["sites"][site_name] = [filepath]
-
-
 def get_crypto_symbol(crypto_addr):
     for crypto_symbol, crypto_addr_re in cryptos:
         if crypto_addr_re.search(crypto_addr):
@@ -230,6 +216,20 @@ def get_site_name(filepath):
         siteName = siteName[:-1] # remove unnecessary "/"
 
     return siteName
+
+
+def add_found_record(addr, symbol, site_name, filepath):
+    with found_records_lock:
+        if addr in found_records:
+            found_records[addr]["count"] += 1
+        else:
+            found_records[addr] = {"symbol": symbol, "count": 1, "sites": {}}
+        
+        if site_name in found_records[addr]["sites"]:
+            if filepath not in found_records[addr]["sites"][site_name]:
+                found_records[addr]["sites"][site_name].append(filepath)
+        else:
+            found_records[addr]["sites"][site_name] = [filepath]
 
 
 main() # the entry point of the program
