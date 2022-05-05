@@ -6,6 +6,7 @@ import re # used for regular expressions
 import queue # thread safe job queue
 import threading # used for multithreading
 from time import sleep # sleeping for progress monitor thread
+import json # used for final output records
 
 import config # import custom configuration file
 
@@ -13,6 +14,8 @@ import config # import custom configuration file
 # prepare regular expressions (constants)
 REMOVE_PROP_RE = re.compile(r"(\@|\?).*$")
 KEEP_LAST_EXT_RE = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
+REMOVE_DATASET_DIR = re.compile(r"^" + config.DATASET_DIR + r"/")
+KEEP_ONLY_FIRST_DIR = re.compile(r"/.*$")
 
 # global variables
 ignored_dirs = set() # using sets for quick search
@@ -28,11 +31,17 @@ prepared_count = 0
 # each thread for processing files has its own counter
 # e.g., for deploying to a system with high number of CPUs
 processed_counts = [0] * config.NUM_THREADS
-matched_counts = [0] * config.NUM_THREADS # number of files matching regex
+matches_counts = [0] * config.NUM_THREADS # number of total addresses found
+
+# dictionary of final records
+found_records = {}
+found_records_lock = threading.Lock()
+
+print_report = True # as long as set, a thread prints the progress report
 
 
 def main():
-    global ignored_dirs, ignored_exts, common_addr_re, cryptos
+    global ignored_dirs, ignored_exts, common_addr_re, cryptos, print_report
 
     with open(config.IGNORED_DIRS_PATH) as id_file:
         ignored_dirs = set(id_file.read().splitlines())
@@ -45,15 +54,17 @@ def main():
         crypto_strs = ar_file.read().splitlines() # read the rest
 
     # compile all loaded regex (match priority is determined by their order in file)
-    common_addr_re = re.compile(common_addr)
+    pre_chars = config.ADDR_PRE_CHARS; post_chars = config.ADDR_POST_CHARS
+    common_addr_re = re.compile("[" + pre_chars + "]" + common_addr + "[" + post_chars + "]")
+
     for crypto_str in crypto_strs:
         crypto_symbol, crypto_addr = crypto_str.split(" ", maxsplit=1)
         cryptos.append((crypto_symbol, re.compile(crypto_addr)))
     
     # create progress monitor thread
-    thread = threading.Thread(target=progress_monitor)
-    thread.setDaemon(True) # will be ended on main thread exit automatically
-    thread.start()
+    progThread = threading.Thread(target=progress_monitor)
+    progThread.setDaemon(True) # will be ended on main thread exit automatically
+    progThread.start()
 
     # when not using continuous processing, user knows the total number of files
     # to be processed as soon as possible
@@ -68,9 +79,17 @@ def main():
         load_filepaths(config.DATASET_DIR)
 
     filepaths_q.join() # wait for the queue to be empty
+    print_report = False # synchronize output
+    progThread.join()
 
     print_current_progress() # last report
-    print("processed", sum(processed_counts), "files")
+    # summary with no number shortening
+    print(sum(matches_counts), "matches in", sum(processed_counts), "files")
+    print("writing results to", config.RESULTS_PATH)
+
+    final_found_records = {"addresses": found_records} # add header
+    with open(config.RESULTS_PATH, "w") as rp_file:
+        json.dump(final_found_records, rp_file, indent=4)
 
 
 def load_filepaths(dataset):
@@ -109,8 +128,8 @@ def is_filename_accepted(filename):
 
 
 def progress_monitor():
-    print("matched / processed / prepared [files]")
-    while True: # thread function, will be ended on main thread exit
+    print("total matches <== processed files / prepared files")
+    while print_report:
         print_current_progress()
         sleep(config.PROGRESS_REPORT_INTERVAL)
 
@@ -137,25 +156,25 @@ def print_current_progress():
         processed_divisor = 1_000_000
         processed_suff = "M"
 
-    matched_count = sum(matched_counts)
-    if matched_count < 10_000:
-        matched_divisor = 1
-        matched_suff = ""
-    elif matched_count < 10_000_000:
-        matched_divisor = 1_000
-        matched_suff = "k"
+    matches_count = sum(matches_counts)
+    if matches_count < 10_000:
+        matches_divisor = 1
+        matches_suff = ""
+    elif matches_count < 10_000_000:
+        matches_divisor = 1_000
+        matches_suff = "k"
     else:
-        matched_divisor = 1_000_000
-        matched_suff = "M"
+        matches_divisor = 1_000_000
+        matches_suff = "M"
     
     prepared_count_str = str(int(prepared_count / prepared_divisor))
     prepared_count_str += prepared_suff
     processed_count_str = str(int(processed_count / processed_divisor))
     processed_count_str += processed_suff
-    matched_count_str = str(int(matched_count / matched_divisor))
-    matched_count_str += matched_suff
+    matches_count_str = str(int(matches_count / matches_divisor))
+    matches_count_str += matches_suff
 
-    print(matched_count_str, "/", processed_count_str, "/", prepared_count_str)
+    print(matches_count_str, "<==", processed_count_str, "/", prepared_count_str)
 
 
 # main function for working threads
@@ -165,71 +184,52 @@ def process_files(t_num):
     while True:
         filepath = filepaths_q.get()
 
-        # replace unknown bytes with a question mark "?"
         with open(filepath, encoding="ascii", errors="replace") as file:
             file_content = file.read()
-            matches = common_addr_re.findall(file_content)
+            matches = common_addr_re.finditer(file_content)
             for match in matches:
-                for crypto_symbol, crypto_addr_re in cryptos:
-                    if crypto_addr_re.match(match):
-                        print(filepath, crypto_symbol, match)
-
-            # result = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
-            # if result:
-            #     result = re.search(r'0x[a-fA-F0-9]{40}', result.group())
-            #     if result:
-            #         print(filepath, result.group())
-
-
-        # try:
-        #     with open(filepath, encoding="ascii") as file:
-        #         file_content = file.read()
-        #         crypto_addr = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
-        #         if crypto_addr:
-        #             correct_cnt += 1
-        # except UnicodeDecodeError:
-        #     with open(filepath, encoding="ascii", errors="replace") as file:
-        #         file_content = file.read()
-        #         crypto_addr = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
-        #         if crypto_addr:
-        #             error_cnt += 1
-        
-        # if correct_cnt % 1000 == 0 or error_cnt % 1000 == 0:
-        #     print(correct_cnt, error_cnt)
-
-
-        # try:
-        #     with open(filepath, encoding="ascii") as file:
-        #         file_content = file.read()
-        #         if magic.from_buffer(file_content, mime=True).startswith("text/"):
-        #             crypto_addr = re.search(r'[^a-zA-Z0-9][a-zA-Z0-9]{26,95}[^a-zA-Z0-9]', file_content)
-        #             if crypto_addr:
-        #                 print(filepath, crypto_addr)
-        # except UnicodeDecodeError:
-        #     pass
-
-
-            # result = re.search(r'BEGIN PGP.*END PGP', file_content)
-            # if result:
-            #     print(result)
-
-        # with open(filepath, encoding='utf-8', errors='ignore') as file:
-        #     a = file.read()
-
-        # try:
-        #     with open(filepath) as file:
-        #         file_content = file.read()
-        #         # result = re.search(r'BEGIN PGP PUBLIC KEY BLOCK.*END PGP PUBLIC KEY BLOCK', file_content)
-        #         result = re.search(r'[a-zA-Z0-9]*[a-zA-Z0-9]{25}[a-zA-Z0-9]*', file_content)
-        #         if result:
-        #             print(filepath)
-        # except:
-        #     with open(filepath, "rb") as file:
-        #         file_content = file.read()
+                addr = match.group(0)[1:-1] # remove pre and post characters
+                symbol = get_crypto_symbol(addr) # categorize crypto address
+                if symbol: # if address recognized
+                    site_name = get_site_name(filepath)
+                    add_found_record(addr, symbol, site_name, filepath)
+                    matches_counts[t_num] += 1
 
         # increase processed files count for current thread
         processed_counts[t_num] += 1
         filepaths_q.task_done()
+
+
+def add_found_record(addr, symbol, site_name, filepath):
+    with found_records_lock:
+        if addr in found_records:
+            found_records[addr]["count"] += 1
+        else:
+            found_records[addr] = {"symbol": symbol, "count": 1, "sites": {}}
+        
+        if site_name in found_records[addr]["sites"]:
+            if filepath not in found_records[addr]["sites"][site_name]:
+                found_records[addr]["sites"][site_name].append(filepath)
+        else:
+            found_records[addr]["sites"][site_name] = [filepath]
+
+
+def get_crypto_symbol(crypto_addr):
+    for crypto_symbol, crypto_addr_re in cryptos:
+        if crypto_addr_re.search(crypto_addr):
+            return crypto_symbol
+
+
+def get_site_name(filepath):
+    siteName = REMOVE_DATASET_DIR.sub("", filepath)
+    siteName = KEEP_ONLY_FIRST_DIR.sub("/", siteName) # with slash
+    
+    if siteName[-1] != "/": # individual files in datatset directory
+        siteName = "unknown"
+    else:
+        siteName = siteName[:-1] # remove unnecessary "/"
+
+    return siteName
 
 
 main() # the entry point of the program
