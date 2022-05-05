@@ -12,9 +12,6 @@ import config # import custom configuration file
 
 
 # prepare regular expressions (constants)
-EMAIL_REGEX = re.compile(r'[\w\.\-]+@[\w\.\-]+')
-AMOUNT_REGEX = re.compile(r'[\$]\d+(\.\d+)?')
-
 REMOVE_PROP_RE = re.compile(r"(\@|\?).*$")
 KEEP_LAST_EXT_RE = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
 REMOVE_DATASET_DIR = re.compile(r"^" + config.DATASET_DIR + r"/")
@@ -231,13 +228,13 @@ def get_site_name(filepath):
 
 
 def get_first_email(file_content):
-    match = EMAIL_REGEX.search(file_content)
+    match = config.EMAIL_RE.search(file_content)
     if match: # if no match, returns None in default
         return match.group(0)
         
 
 def get_first_amount(file_content):
-    match = AMOUNT_REGEX.search(file_content)
+    match = config.AMOUNT_RE.search(file_content)
     if match:
         return match.group(0)
 

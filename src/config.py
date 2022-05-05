@@ -2,6 +2,7 @@
 # login: xsalve03
 
 import os
+import re
 
 # file path constants
 # the default dataset contains all archives with size of <=20MB
@@ -27,3 +28,7 @@ ADDR_POST_CHARS = r" \)\.\,\?\!"
 # when a crypto address is matched, search for first occurrences of items below
 SEARCH_FOR_FIRST_EMAIL = True # email address
 SEARCH_FOR_FIRST_AMOUNT = True # amount of money
+
+# regular expressions of extra file content info (see above)
+EMAIL_RE = re.compile(r'[\w\.\-]+@[\w\.\-]+') # email regex, if used
+AMOUNT_RE = re.compile(r'[\$]\d+(\.\d+)?')
