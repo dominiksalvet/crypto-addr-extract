@@ -12,6 +12,9 @@ import config # import custom configuration file
 
 
 # prepare regular expressions (constants)
+EMAIL_REGEX = re.compile(r'[\w\.\-]+@[\w\.\-]+')
+AMOUNT_REGEX = re.compile(r'[\$]\d+(\.\d+)?')
+
 REMOVE_PROP_RE = re.compile(r"(\@|\?).*$")
 KEEP_LAST_EXT_RE = re.compile(r"(^[^\.]*$|^([^\.]*\.)*)")
 REMOVE_DATASET_DIR = re.compile(r"^" + config.DATASET_DIR + r"/")
@@ -180,6 +183,7 @@ def print_current_progress():
 # main function for working threads
 def process_files(t_num):
     global processed_counts
+    email = None; amount = None
 
     while True:
         filepath = filepaths_q.get()
@@ -192,7 +196,15 @@ def process_files(t_num):
                 symbol = get_crypto_symbol(addr) # categorize crypto address
                 if symbol: # if address recognized
                     site_name = get_site_name(filepath)
-                    add_found_record(addr, symbol, site_name, filepath)
+
+                    # optional info based on configuration
+                    if config.SEARCH_FOR_FIRST_EMAIL:
+                        email = get_first_email(file_content)
+                    if config.SEARCH_FOR_FIRST_AMOUNT:
+                        amount = get_first_amount(file_content)
+
+                    add_found_record(
+                        addr, symbol, site_name, filepath, email, amount)
                     matches_counts[t_num] += 1
 
         # increase processed files count for current thread
@@ -218,18 +230,43 @@ def get_site_name(filepath):
     return siteName
 
 
-def add_found_record(addr, symbol, site_name, filepath):
+def get_first_email(file_content):
+    match = EMAIL_REGEX.search(file_content)
+    if match: # if no match, returns None in default
+        return match.group(0)
+        
+
+def get_first_amount(file_content):
+    match = AMOUNT_REGEX.search(file_content)
+    if match:
+        return match.group(0)
+
+
+def add_found_record(addr, symbol, site_name, filepath, email, amount):
     with found_records_lock:
         if addr in found_records:
             found_records[addr]["count"] += 1
         else:
             found_records[addr] = {"symbol": symbol, "count": 1, "sites": {}}
         
+        append_filepath = True
         if site_name in found_records[addr]["sites"]:
-            if filepath not in found_records[addr]["sites"][site_name]:
-                found_records[addr]["sites"][site_name].append(filepath)
+            if filepath in found_records[addr]["sites"][site_name]:
+                append_filepath = False
         else:
-            found_records[addr]["sites"][site_name] = [filepath]
+            found_records[addr]["sites"][site_name] = []
+        
+        if append_filepath:
+            filepath_extra = [] # extra file content info of the filepath
+            if email: # delivered any associated email?
+                filepath_extra.append(email)
+            if amount:
+                filepath_extra.append(amount)
+
+            if filepath_extra: # add extra properties
+                found_records[addr]["sites"][site_name].append({filepath: filepath_extra})
+            else: # do not add them
+                found_records[addr]["sites"][site_name].append(filepath)
 
 
 main() # the entry point of the program

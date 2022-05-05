@@ -20,6 +20,10 @@ PROGRESS_REPORT_INTERVAL = 1 # in seconds
 CONTINUOUS_PROCESSING = True # enable for processing files as soon as they load
 CONTINUOUS_BUFF_SIZE = 100_000 # size of buffer when continuous processing enabled
 
-# crypto address filter configuration
-ADDR_PRE_CHARS = r" \(\.\,\?\!" # possible characters before the address occurrence
+# filtering options
+ADDR_PRE_CHARS = r" \(" # possible characters before the address occurrence
 ADDR_POST_CHARS = r" \)\.\,\?\!"
+
+# when a crypto address is matched, search for first occurrences of items below
+SEARCH_FOR_FIRST_EMAIL = True # email address
+SEARCH_FOR_FIRST_AMOUNT = True # amount of money
