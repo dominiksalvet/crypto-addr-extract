@@ -14,8 +14,7 @@ CRYPTO_ADDRS_PATH = "crypto_addrs" # contains regex of various crypto addresses
 RESULTS_PATH = "results.json"
 
 # runtime environment configuration
-# to use the same amount of threads as HW CPU threads, use os.cpu_count()
-NUM_THREADS = 2 # intensive storage/memory access, not many threads required
+NUM_THREADS = os.cpu_count() # in default, use same amount as HW threads available
 PROGRESS_REPORT_INTERVAL = 1 # in seconds
 
 CONTINUOUS_PROCESSING = True # enable for processing files as soon as they load
