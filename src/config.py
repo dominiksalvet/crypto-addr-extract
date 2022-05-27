@@ -1,5 +1,7 @@
-# author: Dominik Salvet
-# login: xsalve03
+#-------------------------------------------------------------------------------
+# Copyright 2022 Dominik Salvet
+# https://github.com/dominiksalvet/crypto-addr-extract
+#-------------------------------------------------------------------------------
 
 import os
 import re

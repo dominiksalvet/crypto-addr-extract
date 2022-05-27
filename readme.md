@@ -63,7 +63,7 @@ The standard library `json` directly contains a function to store a dictionary i
 
 ## File Extension Analysis
 
-For the purpose of this project, a simple Python program for creating a summary of file extensions used in files of a directory was developed. It was crucial when determining the default contents of the `ignored_exts` file. It is implemented in the `ext_summary.py` file.
+For the purpose of this project, a simple Python program for creating a summary of file extensions used in files of a directory was developed. It was crucial when determining the default contents of the `ignored_exts` file. It is implemented in the `extensions.py` file.
 
 ## Achieved Results
 

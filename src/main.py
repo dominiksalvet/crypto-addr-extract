@@ -1,5 +1,7 @@
-# author: Dominik Salvet
-# login: xsalve03
+#-------------------------------------------------------------------------------
+# Copyright 2022 Dominik Salvet
+# https://github.com/dominiksalvet/crypto-addr-extract
+#-------------------------------------------------------------------------------
 
 import os # used for working with file/directory paths
 import re # used for regular expressions
