@@ -1,10 +1,10 @@
 # Cryptocurrency Addresses Extractor
 
-The main focus of this program is to extract cryptocurrency addresses from given unstructured dataset. This dataset is expected to be quite big and the content of its files heterogenous. As the speed of processing is key, it was required to come up with optimizations, which would accelerate processing files.
+The main focus of this program is to extract cryptocurrency addresses from given unstructured dataset. This dataset is expected to be quite big and the content of its files heterogenous. As the speed of processing is key, it was required to come up with optimizations, which would accelerate processing files. The examined dataset is accessible at https://archive.org/download/dnmarchives.
 
 As Python is considered one of the most used programming languages for data science, it was an obvious choice, even though comparing with other, compiled, languages it may lack behind a bit in terms of performance. Nevertheless, if choosing C++ for example, it would take much longer programming time to create a program like this. Hence, Python is the used programming languge. Only standard libraries were used.
 
-Examinated dataset: https://archive.org/download/dnmarchives
+> This program was created within a course of my master's studies.
 
 ## Implementation Details
 
