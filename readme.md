@@ -1,8 +1,10 @@
-# Documentation of Cryptocurrency Addresses Extractor
+# Cryptocurrency Addresses Extractor
 
 The main focus of this program is to extract cryptocurrency addresses from given unstructured dataset. This dataset is expected to be quite big and the content of its files heterogenous. As the speed of processing is key, it was required to come up with optimizations, which would accelerate processing files.
 
 As Python is considered one of the most used programming languages for data science, it was an obvious choice, even though comparing with other, compiled, languages it may lack behind a bit in terms of performance. Nevertheless, if choosing C++ for example, it would take much longer programming time to create a program like this. Hence, Python is the used programming languge. Only standard libraries were used.
+
+Examinated dataset: https://archive.org/download/dnmarchives
 
 ## Implementation Details
 
@@ -37,7 +39,7 @@ Also, main work threads are spawned here, and they take jobs (i.e., filepaths) f
 
 ### 3. Walk through dataset
 
-The dataset is expected to be a directory of any unstructured data (so it must be already uncompressed). Here is the part, where early optimizations are performed, since when reaching a directory, whose name matches with some in the `ignored_dirs` file, it will be pruned from further file walk. All further processing works with filepaths that belong to files (directories are omitted). If the currect file of the file walk has a file extension, which is listed in the `ignored_exts` file, it is automatically skipped.
+The dataset is expected to be a directory of unstructured data (so it must be already uncompressed). Here is the part, where early optimizations are performed, since when reaching a directory, whose name matches with some in the `ignored_dirs` file, it will be pruned from further file walk. All further processing works with filepaths that belong to files (directories are omitted). If the currect file of the file walk has a file extension, which is listed in the `ignored_exts` file, it is automatically skipped.
 
 Once a file is passed through these quick filters, its path is added to a thread-safe queue of files to be processed. The number of loaded filepaths for progress monitor is increased.
 
@@ -59,7 +61,22 @@ The dictionary is designed in the way that if a cryptocurrency address was found
 
 ### 6. Write found records to a file
 
-The standard library `json` directly contains a function to store a dictionary into a file. The program uses it.
+The standard library `json` directly contains a function to store a dictionary into a file. The program uses it, and stores the found records to the `results.json` file in default. It respects the following structure template:
+
+```
+addresses:
+    <address>:
+        symbol: <symbol>
+        count: <count>
+        sites:
+            <site name>
+                <filepath>
+                ...
+            ...
+    ...
+```
+
+> Optionally, `<filepath>` may have an array of `<email>` and `<amount>`. Each is present only if it exists. The `...` expression means array of the above item with the same level of indentation. 
 
 ## File Extension Analysis
 
@@ -67,11 +84,11 @@ For the purpose of this project, a simple Python program for creating a summary 
 
 ## Achieved Results
 
-Due to my lower laptop configuration (i5-7200U, 8 GB RAM, 256 GB SSD), I had to choose a smaller dataset. Hence, my dataset consists of all archives, whose size is less or equal to 20 MB. These are the dataset details:
+Due to my lower laptop performance (i5-7200U, 8 GB RAM, 256 GB SSD), I had to choose a smaller dataset. Hence, my dataset consists of all archives, whose size is less or equal to 20 MB. These are the dataset details:
 
 * `dataset`
   * Total number of files and directories: 795 936
-    * Of which 760 257 are files
+    * 760 257 are files
   * 20,3 GB in size
 
 Experiments performed on my laptop and my dataset:
