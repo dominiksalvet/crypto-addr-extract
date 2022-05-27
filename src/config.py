@@ -33,4 +33,4 @@ SEARCH_FOR_FIRST_AMOUNT = True # amount of money
 
 # regular expressions of extra file content info (see above)
 EMAIL_RE = re.compile(r'[\w\.\-]+@[\w\.\-]+') # email regex, if used
-AMOUNT_RE = re.compile(r'[\$]\d+(\.\d+)?')
+AMOUNT_RE = re.compile(r'[\$]\d+([\.\,]\d+)?')
